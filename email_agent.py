@@ -1,3 +1,4 @@
+
 import os
 import smtplib
 
@@ -34,18 +35,32 @@ llm = ChatGroq(
 )
 
 
-# Define the email-sending tool
+# Define the email-sending too
 @tool
 def send_email(to: str, subject: str, body: str) -> str:
-    """Send an email using Gmail.
+    """Send an email using Gmail after collecting all required details.
 
     Args:
-        to: Recipient's email address.
-        subject: Subject line of the email.
-        body: Complete email message.
+        to: Valid recipient email address.
+        subject: Non-empty email subject.
+        body: Non-empty email body.
     """
 
-    # Show the email before sending
+    # Validate inputs BEFORE displaying the preview
+    to = to.strip()
+    subject = subject.strip()
+    body = body.strip()
+
+    if not to or "@" not in to or "." not in to.split("@")[-1]:
+        return "ERROR: A valid recipient email address is required."
+
+    if not subject:
+        return "ERROR: Email subject is required. Ask the user for it."
+
+    if not body:
+        return "ERROR: Email body is required. Ask the user for it."
+
+    # Show preview only after validation
     print("\n" + "=" * 45)
     print("EMAIL PREVIEW")
     print("=" * 45)
@@ -55,7 +70,6 @@ def send_email(to: str, subject: str, body: str) -> str:
     print("\nBody:\n", body)
     print("=" * 45)
 
-    # Require explicit user confirmation
     confirmation = input(
         "\nSend this email? Type YES to confirm: "
     ).strip()
@@ -63,7 +77,6 @@ def send_email(to: str, subject: str, body: str) -> str:
     if confirmation != "YES":
         return "Email cancelled. Nothing was sent."
 
-    # Construct the email
     message = EmailMessage()
     message["From"] = EMAIL_ADDRESS
     message["To"] = to
@@ -71,18 +84,10 @@ def send_email(to: str, subject: str, body: str) -> str:
     message.set_content(body)
 
     try:
-        # Connect to Gmail SMTP
         with smtplib.SMTP_SSL(
-            "smtp.gmail.com",
-            465,
-            timeout=30
+            "smtp.gmail.com", 465, timeout=30
         ) as server:
-
-            server.login(
-                EMAIL_ADDRESS,
-                EMAIL_APP_PASSWORD
-            )
-
+            server.login(EMAIL_ADDRESS, EMAIL_APP_PASSWORD)
             server.send_message(message)
 
         return f"Email successfully sent to {to}."
@@ -91,47 +96,68 @@ def send_email(to: str, subject: str, body: str) -> str:
         return f"Email sending failed: {error}"
 
 
-# Create the AI agent
+# Create the agent
 agent = create_agent(
     model=llm,
     tools=[send_email],
-    system_prompt="""
-    You are an email assistant.
+    system_prompt = """
+        You are an email assistant.
 
-    Your responsibilities:
-    1. Understand the user's email-sending request.
-    2. Ask for missing recipient, subject, or message details.
-    3. Draft a clear and professional email.
-    4. Use the send_email tool to send the email.
-    5. Never claim an email was sent unless the tool confirms success.
-    6. If sending is cancelled or fails, clearly explain that.
-    7. Never invent a recipient's email address.
+        Rules:
+        1. Collect the recipient email address, subject, and body.
+        2. Ask the user for any missing details.
+        3. Remember details provided in previous messages.
+        4. Never invent a recipient address or email content.
+        5. Once all three fields are available, call send_email immediately.
+        6. Do not ask "Would you like me to send this email?"
+        The send_email tool already displays a preview and asks
+        the user for explicit confirmation.
+        7. Never claim an email was sent unless the tool confirms success.
+        8. If sending is cancelled or fails, explain that clearly.
     """
 )
 
+# Conversation loop
+chat_history = []
 
-# Run the agent
 print("Email AI Agent is ready!")
-print("Type 0 to exit.\n")
+print("Enter 0 to exit.\n")
 
 while True:
-    user_input = input("You: ").strip()
-
-    if user_input == "0":
-        print("Agent: Goodbye!")
-        break
-
-    if not user_input:
-        continue
-
     try:
+        user_input = input("You: ").strip()
+
+        if user_input == "0":
+            print("Agent: Goodbye!")
+            break
+
+        if not user_input:
+            continue
+
+        # Add the new user message
+        from langchain_core.messages import HumanMessage
+
+        chat_history.append(
+            HumanMessage(content=user_input)
+        )
+
+        # Invoke agent with the complete conversation
         result = agent.invoke({
-            "messages": [
-                {"role": "user", "content": user_input}
-            ]
+            "messages": chat_history
         })
 
-        print("\nAgent:", result["messages"][-1].content, "\n")
+        # Preserve assistant messages and tool results
+        chat_history = result["messages"]
+
+        # Display the latest assistant response
+        for message in reversed(chat_history):
+            if message.type == "ai" and message.content:
+                print("\nAgent:", message.content, "\n")
+                break
+
+    except KeyboardInterrupt:
+        print("\nAgent: Goodbye!")
+        break
 
     except Exception as error:
-        print("\nError:", error, "\n")
+        print(f"\nError: {error}\n")
