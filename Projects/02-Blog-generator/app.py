@@ -8,22 +8,12 @@ from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
-
-# ==========================================
-# 1. STREAMLIT CONFIGURATION
-# ==========================================
-
 st.set_page_config(
     page_title="BlogCraft AI",
     page_icon="✍️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
-
-
-# ==========================================
-# 2. CUSTOM CSS
-# ==========================================
 
 st.markdown("""
 <style>
@@ -108,11 +98,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-
-# ==========================================
-# 3. MODEL CONFIGURATION
-# ==========================================
-
 MODEL = os.getenv("MODEL")
 
 if not MODEL:
@@ -136,11 +121,6 @@ def load_model():
 llm = load_model()
 parser = StrOutputParser()
 
-
-# ==========================================
-# 4. HUMAN WRITING STYLE
-# ==========================================
-
 HUMAN_STYLE = """
 Write naturally and clearly.
 
@@ -156,11 +136,6 @@ Rules:
 - Do not invent statistics, facts, or quotations.
 - Make every paragraph useful to the reader.
 """
-
-
-# ==========================================
-# 5. OUTLINE PROMPT
-# ==========================================
 
 OUTLINE_PROMPT = ChatPromptTemplate.from_messages([
     (
@@ -202,11 +177,6 @@ OUTLINE_PROMPT = ChatPromptTemplate.from_messages([
         """
     )
 ])
-
-
-# ==========================================
-# 6. DRAFT PROMPT
-# ==========================================
 
 DRAFT_PROMPT = ChatPromptTemplate.from_messages([
     (
@@ -256,11 +226,6 @@ DRAFT_PROMPT = ChatPromptTemplate.from_messages([
     )
 ])
 
-
-# ==========================================
-# 7. POLISH PROMPT
-# ==========================================
-
 POLISH_PROMPT = ChatPromptTemplate.from_messages([
     (
         "system",
@@ -309,21 +274,11 @@ POLISH_PROMPT = ChatPromptTemplate.from_messages([
     )
 ])
 
-
-# ==========================================
-# 8. LANGCHAIN CHAINS
-# ==========================================
-
 outline_chain = OUTLINE_PROMPT | llm | parser
 
 draft_chain = DRAFT_PROMPT | llm | parser
 
 final_chain = POLISH_PROMPT | llm | parser
-
-
-# ==========================================
-# 9. BLOG GENERATION FUNCTION
-# ==========================================
 
 def generate_blog(
     topic,
@@ -379,11 +334,6 @@ def generate_blog(
         "final_blog": final_blog
     }
 
-
-# ==========================================
-# 10. SIDEBAR
-# ==========================================
-
 with st.sidebar:
     st.markdown("## ✍️ BlogCraft AI")
 
@@ -421,11 +371,6 @@ with st.sidebar:
 
     st.caption("Built with Python, LangChain, Groq and Streamlit")
 
-
-# ==========================================
-# 11. MAIN HEADER
-# ==========================================
-
 st.markdown(
     '<div class="main-title">✍️ BlogCraft AI</div>',
     unsafe_allow_html=True
@@ -437,11 +382,6 @@ st.markdown(
     '</div>',
     unsafe_allow_html=True
 )
-
-
-# ==========================================
-# 12. INPUT FORM
-# ==========================================
 
 st.markdown("### 📝 Create a new blog")
 
@@ -505,11 +445,6 @@ with st.form("blog_form"):
         use_container_width=True
     )
 
-
-# ==========================================
-# 13. GENERATE BLOG
-# ==========================================
-
 if generate_button:
 
     if not topic.strip():
@@ -549,11 +484,6 @@ if generate_button:
         except Exception as error:
             st.error("Something went wrong while generating the blog.")
             st.caption(str(error))
-
-
-# ==========================================
-# 14. DISPLAY RESULTS
-# ==========================================
 
 if "blog_result" in st.session_state:
 
