@@ -299,4 +299,3 @@ if query:
                 )
 
                 st.caption(str(e))
-                
